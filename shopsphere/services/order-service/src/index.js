@@ -8,7 +8,6 @@ import YAML from "yamljs";
 
 import ordersRoutes from "./routes/orders.routes.js";
 import searchRoutes from "./routes/search.routes.js";
-
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 dotenv.config();
@@ -23,7 +22,6 @@ app.use(express.json());
 app.use("/api/v1", ordersRoutes);
 app.use("/api/v1", searchRoutes);
 
-
 // Swagger
 const swaggerDocument = YAML.load("./src/docs/swagger.yaml");
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -34,7 +32,8 @@ app.get("/health", (req, res) => res.json({ status: "ok", service: "order-servic
 // Error handler last
 app.use(errorHandler);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Order service running on http://localhost:${process.env.PORT}`);
-  console.log(`Swagger docs: http://localhost:${process.env.PORT}/docs`);
+const PORT = process.env.PORT || 3003;
+app.listen(PORT, () => {
+  console.log(`Order service running on http://localhost:${PORT}`);
+  console.log(`Swagger docs: http://localhost:${PORT}/docs`);
 });

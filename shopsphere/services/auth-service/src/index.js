@@ -13,7 +13,6 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 dotenv.config();
 
 const app = express();
-
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
@@ -33,7 +32,8 @@ app.get("/health", (req, res) => res.json({ status: "ok", service: "auth-service
 // Error handler last
 app.use(errorHandler);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Auth service running on http://localhost:${process.env.PORT}`);
-  console.log(`Swagger docs: http://localhost:${process.env.PORT}/docs`);
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Auth service running on http://localhost:${PORT}`);
+  console.log(`Swagger docs: http://localhost:${PORT}/docs`);
 });

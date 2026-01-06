@@ -1,18 +1,65 @@
-version: "3.9"
 services:
+  auth-service:
+    build: ./services/auth-service
+    container_name: shopsphere-auth
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - JWT_SECRET=supersecret
+    restart: unless-stopped
+
+  catalog-service:
+    build: ./services/catalog-service
+    container_name: shopsphere-catalog
+    ports:
+      # ✅ Host port changed to avoid conflict:
+      - "3004:3002"
+    environment:
+      - PORT=3002
+      - SOLR_URL=http://solr:8983/solr/products
+    depends_on:
+      - solr
+    restart: unless-stopped
+
+  order-service:
+    build: ./services/order-service
+    container_name: shopsphere-orders
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+    restart: unless-stopped
+
+  gateway:
+    build: ./gateway
+    container_name: shopsphere-gateway
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+
+      # ✅ Inside docker network, services talk by service-name + container port
+      - CATALOG_URL=http://catalog-service:3002/api/v1
+      - ORDER_URL=http://order-service:3003/api/v1
+      - AUTH_URL=http://auth-service:3001/api/v1
+    depends_on:
+      - catalog-service
+      - order-service
+      - auth-service
+    restart: unless-stopped
+
   solr:
     image: solr:9
     container_name: shopsphere-solr
     ports:
       - "8983:8983"
+    command:
+      - solr-precreate
+      - products
     volumes:
-      - solrdata:/var/solr
-
-  redis:
-    image: redis:7
-    container_name: shopsphere-redis
-    ports:
-      - "6379:6379"
+      - solr_data:/var/solr
+    restart: unless-stopped
 
 volumes:
-  solrdata:
+  solr_data:

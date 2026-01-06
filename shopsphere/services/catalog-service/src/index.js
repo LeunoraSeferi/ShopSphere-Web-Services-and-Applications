@@ -6,8 +6,6 @@ import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 
-
-
 import productsRoutes from "./routes/products.routes.js";
 import categoriesRoutes from "./routes/categories.routes.js";
 import searchRoutes from "./routes/search.routes.js";
@@ -20,8 +18,6 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
-
-
 
 // Versioning
 app.use("/api/v1", productsRoutes);
@@ -38,7 +34,8 @@ app.get("/health", (req, res) => res.json({ status: "ok", service: "catalog-serv
 // Errors last
 app.use(errorHandler);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Catalog service running on http://localhost:${process.env.PORT}`);
-  console.log(`Swagger docs: http://localhost:${process.env.PORT}/docs`);
+const PORT = process.env.PORT || 3002;
+app.listen(PORT, () => {
+  console.log(`Catalog service running on http://localhost:${PORT}`);
+  console.log(`Swagger docs: http://localhost:${PORT}/docs`);
 });
