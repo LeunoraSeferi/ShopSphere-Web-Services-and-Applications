@@ -1,6 +1,7 @@
 import express from "express";
 import { z } from "zod";
 import { orders } from "../data/db.js";
+import { requireAuth, requireRole } from "../middlewares/authJwt.js";
 
 const router = express.Router();
 
@@ -20,26 +21,26 @@ function calcTotal(items) {
   return items.reduce((sum, it) => sum + it.qty * it.unitPrice, 0);
 }
 
-// ✅ GET all orders
+//  GET all orders (keep public OR protect if you want; leaving public)
 router.get("/orders", (req, res) => {
   res.json(orders);
 });
 
-// ✅ GET order by id
+//  GET order by id
 router.get("/orders/:id", (req, res, next) => {
   const id = Number(req.params.id);
-  const o = orders.find(x => x.id === id);
+  const o = orders.find((x) => x.id === id);
   if (!o) return next({ status: 404, code: "NOT_FOUND", message: "Order not found" });
   res.json(o);
 });
 
-// ✅ POST create order
-router.post("/orders", (req, res, next) => {
+//  POST create order (USER must be authenticated)
+router.post("/orders", requireAuth, (req, res, next) => {
   try {
     const body = createOrderSchema.parse(req.body);
 
     const newOrder = {
-      id: orders.length ? Math.max(...orders.map(o => o.id)) + 1 : 1,
+      id: orders.length ? Math.max(...orders.map((o) => o.id)) + 1 : 1,
       customerId: body.customerId,
       items: body.items,
       status: body.status || "PENDING",
@@ -50,14 +51,19 @@ router.post("/orders", (req, res, next) => {
     orders.push(newOrder);
     res.status(201).json(newOrder);
   } catch (e) {
-    next({ status: 400, code: "VALIDATION_ERROR", message: e.errors?.[0]?.message || "Invalid input" });
+    next({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: e.errors?.[0]?.message || "Invalid input",
+    });
   }
 });
 
-// ✅ PUT update order (status + items)
+//  PUT update order (optional: protect; leaving open like your original)
+// If you want advanced RBAC later, we can make: admin only OR owner only
 router.put("/orders/:id", (req, res, next) => {
   const id = Number(req.params.id);
-  const o = orders.find(x => x.id === id);
+  const o = orders.find((x) => x.id === id);
   if (!o) return next({ status: 404, code: "NOT_FOUND", message: "Order not found" });
 
   const { status, items } = req.body;
@@ -72,7 +78,11 @@ router.put("/orders/:id", (req, res, next) => {
 
   if (items !== undefined) {
     if (!Array.isArray(items) || items.length === 0) {
-      return next({ status: 400, code: "VALIDATION_ERROR", message: "Items must be a non-empty array" });
+      return next({
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "Items must be a non-empty array",
+      });
     }
     o.items = items;
     o.total = calcTotal(items);
@@ -81,10 +91,10 @@ router.put("/orders/:id", (req, res, next) => {
   res.json(o);
 });
 
-// ✅ DELETE order (remove)
-router.delete("/orders/:id", (req, res, next) => {
+//  DELETE order (ADMIN only)
+router.delete("/orders/:id", requireAuth, requireRole("admin"), (req, res, next) => {
   const id = Number(req.params.id);
-  const idx = orders.findIndex(x => x.id === id);
+  const idx = orders.findIndex((x) => x.id === id);
   if (idx === -1) return next({ status: 404, code: "NOT_FOUND", message: "Order not found" });
 
   orders.splice(idx, 1);

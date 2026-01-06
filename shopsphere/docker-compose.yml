@@ -13,10 +13,10 @@ services:
     build: ./services/catalog-service
     container_name: shopsphere-catalog
     ports:
-      # ✅ Host port changed to avoid conflict:
-      - "3004:3002"
+      - "3004:3002" # host:container (keep container 3002)
     environment:
       - PORT=3002
+      - JWT_SECRET=supersecret
       - SOLR_URL=http://solr:8983/solr/products
     depends_on:
       - solr
@@ -29,6 +29,7 @@ services:
       - "3003:3003"
     environment:
       - PORT=3003
+      - JWT_SECRET=supersecret
     restart: unless-stopped
 
   gateway:
@@ -38,15 +39,13 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
-
-      # ✅ Inside docker network, services talk by service-name + container port
       - CATALOG_URL=http://catalog-service:3002/api/v1
       - ORDER_URL=http://order-service:3003/api/v1
       - AUTH_URL=http://auth-service:3001/api/v1
     depends_on:
+      - auth-service
       - catalog-service
       - order-service
-      - auth-service
     restart: unless-stopped
 
   solr:
