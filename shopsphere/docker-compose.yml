@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  solr:
+    image: solr:9
+    container_name: shopsphere-solr
+    ports:
+      - "8983:8983"
+    volumes:
+      - solrdata:/var/solr
+
+  redis:
+    image: redis:7
+    container_name: shopsphere-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  solrdata:

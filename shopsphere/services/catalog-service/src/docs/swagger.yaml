@@ -1,0 +1,198 @@
+openapi: 3.0.0
+info:
+  title: ShopSphere Catalog Service API
+  version: "1.0"
+
+servers:
+  - url: http://localhost:3002/api/v1
+
+paths:
+  /products:
+    get:
+      summary: List products (with HATEOAS)
+      responses:
+        "200":
+          description: OK
+
+    post:
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+                - categoryId
+                - brand
+                - inStock
+              properties:
+                name:
+                  type: string
+                  example: Perfume Z
+                price:
+                  type: number
+                  example: 120
+                categoryId:
+                  type: integer
+                  example: 1
+                brand:
+                  type: string
+                  example: BrandZ
+                inStock:
+                  type: boolean
+                  example: true
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation error
+
+  /products/{id}:
+    get:
+      summary: Get product by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not found
+
+    put:
+      summary: Update product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Perfume Updated
+                price:
+                  type: number
+                  example: 150
+                categoryId:
+                  type: integer
+                  example: 1
+                brand:
+                  type: string
+                  example: BrandUpdated
+                inStock:
+                  type: boolean
+                  example: false
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Validation error
+        "404":
+          description: Not found
+
+    delete:
+      summary: Delete product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: No content
+        "404":
+          description: Not found
+
+  /categories:
+    get:
+      summary: List categories
+      responses:
+        "200":
+          description: OK
+
+    post:
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: Perfumes
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation error
+
+  /categories/{id}:
+    get:
+      summary: Get category by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not found
+
+    put:
+      summary: Update category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Updated Category
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not found
+
+    delete:
+      summary: Delete category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: No content
+        "404":
+          description: Not found
