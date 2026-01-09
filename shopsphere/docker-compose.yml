@@ -1,4 +1,11 @@
 services:
+  redis:
+    image: redis:7
+    container_name: shopsphere-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
   auth-service:
     build: ./services/auth-service
     container_name: shopsphere-auth
@@ -13,7 +20,7 @@ services:
     build: ./services/catalog-service
     container_name: shopsphere-catalog
     ports:
-      - "3004:3002" # host:container (keep container 3002)
+      - "3004:3002" # host:container (container stays 3002)
     environment:
       - PORT=3002
       - JWT_SECRET=supersecret
@@ -39,13 +46,15 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
+      - REDIS_URL=redis://redis:6379
       - CATALOG_URL=http://catalog-service:3002/api/v1
       - ORDER_URL=http://order-service:3003/api/v1
       - AUTH_URL=http://auth-service:3001/api/v1
     depends_on:
-      - auth-service
       - catalog-service
       - order-service
+      - auth-service
+      - redis
     restart: unless-stopped
 
   solr:

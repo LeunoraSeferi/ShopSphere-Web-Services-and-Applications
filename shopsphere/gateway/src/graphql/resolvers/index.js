@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getRedisClient } from "../../redis/redisClient.js";
 
 const CATALOG_URL = process.env.CATALOG_URL || "http://localhost:3002/api/v1";
 
@@ -8,41 +9,83 @@ function toFloat(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+// cache helpers
+async function getCache(key) {
+  const redis = getRedisClient();
+  if (!redis) return null;
+  const cached = await redis.get(key);
+  return cached ? JSON.parse(cached) : null;
+}
+
+async function setCache(key, value, ttl = 60) {
+  const redis = getRedisClient();
+  if (!redis) return;
+  await redis.setEx(key, ttl, JSON.stringify(value));
+}
+
+async function clearProductsCache(productId = null) {
+  const redis = getRedisClient();
+  if (!redis) return;
+
+  await redis.del("catalog:products:all");
+  if (productId) {
+    await redis.del(`catalog:products:id:${productId}`);
+  }
+}
+
 export const resolvers = {
   Query: {
+    //  CACHED
     products: async () => {
+      const cacheKey = "catalog:products:all";
+
+      const cached = await getCache(cacheKey);
+      if (cached) return cached;
+
       const res = await axios.get(`${CATALOG_URL}/products`);
-      // your REST returns an array
+      await setCache(cacheKey, res.data);
       return res.data;
     },
 
+    //  CACHED
     product: async (_, { id }) => {
+      const cacheKey = `catalog:products:id:${id}`;
+
+      const cached = await getCache(cacheKey);
+      if (cached) return cached;
+
       const res = await axios.get(`${CATALOG_URL}/products/${id}`);
+      await setCache(cacheKey, res.data);
       return res.data;
     },
   },
 
   Mutation: {
+    //  NOT cached — invalidate instead
     createProduct: async (_, { input }) => {
       const res = await axios.post(`${CATALOG_URL}/products`, input);
+      await clearProductsCache();
       return res.data;
     },
 
+    //  NOT cached — invalidate instead
     updateProduct: async (_, { id, input }) => {
       const res = await axios.put(`${CATALOG_URL}/products/${id}`, input);
+      await clearProductsCache(id);
       return res.data;
     },
 
+    //  NOT cached — invalidate instead
     deleteProduct: async (_, { id }) => {
       await axios.delete(`${CATALOG_URL}/products/${id}`);
+      await clearProductsCache(id);
       return true;
     },
   },
 
-  // Field-level resolvers (required advanced GraphQL concept)
+  // Field-level resolvers
   Product: {
     category: async (product) => {
-      // category is optional, so returning null is OK if not found
       try {
         const res = await axios.get(`${CATALOG_URL}/categories/${product.categoryId}`);
         return res.data;
@@ -52,15 +95,7 @@ export const resolvers = {
     },
 
     finalPrice: (product) => {
-      // IMPORTANT: must return a number ALWAYS because schema is Float!
-      // Example logic: no discount -> finalPrice = price
-      const price = toFloat(product.price, 0);
-
-      // You can later add discount logic here if you want:
-      // const discount = product.inStock ? 0 : 0.1;
-      // return price * (1 - discount);
-
-      return price;
+      return toFloat(product.price, 0);
     },
   },
 };
