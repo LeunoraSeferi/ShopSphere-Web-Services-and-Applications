@@ -14,6 +14,8 @@ import { resolvers } from "./graphql/resolvers/index.js";
 // Redis connect
 import { connectRedis } from "./redis/redisClient.js";
 import { apiLimiter } from "./middlewares/rateLimit.js";
+import { metricsMiddleware, metricsEndpoint } from "./monitoring/metrics.js";
+
 // Cache middlewares
 import { cacheGet } from "./middlewares/cache.js";
 import { clearProductsCache } from "./middlewares/cacheInvalidate.js";
@@ -23,6 +25,9 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
+
+app.use(metricsMiddleware);
+
 app.use(apiLimiter);
 
 // Connect Redis when gateway starts
@@ -90,6 +95,8 @@ app.post("/api/v1/products", async (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "gateway" });
 });
+
+app.get("/metrics", metricsEndpoint);
 
 // Apollo Server (GraphQL)
 const server = new ApolloServer({

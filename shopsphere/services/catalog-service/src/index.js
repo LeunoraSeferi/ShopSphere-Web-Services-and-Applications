@@ -11,6 +11,8 @@ import categoriesRoutes from "./routes/categories.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
+
+
 dotenv.config();
 
 const app = express();
@@ -19,10 +21,13 @@ app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
 
+
 // Versioning
 app.use("/api/v1", productsRoutes);
 app.use("/api/v1", categoriesRoutes);
 app.use("/api/v1", searchRoutes);
+
+
 
 // Swagger
 const swaggerDocument = YAML.load("./src/docs/swagger.yaml");
