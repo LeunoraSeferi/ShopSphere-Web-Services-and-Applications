@@ -10,6 +10,7 @@ import productsRoutes from "./routes/products.routes.js";
 import categoriesRoutes from "./routes/categories.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import solrAdminRoutes from "./routes/solrAdmin.routes.js";
 
 
 
@@ -26,6 +27,8 @@ app.use(express.json());
 app.use("/api/v1", productsRoutes);
 app.use("/api/v1", categoriesRoutes);
 app.use("/api/v1", searchRoutes);
+app.use("/api/v1", solrAdminRoutes);
+
 
 
 
