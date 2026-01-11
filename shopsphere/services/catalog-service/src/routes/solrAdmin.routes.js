@@ -5,23 +5,23 @@ import { solrAddDocs } from "../solr/solrClient.js";
 const router = express.Router();
 
 // POST /api/v1/solr/reindex
+// Reads products from Postgres and indexes them into Solr
 router.post("/solr/reindex", async (req, res, next) => {
   try {
-    //  Read ALL products from Postgres (this includes new products added via Postman)
     const result = await query(
       `SELECT 
-         id,
-         name,
-         brand,
-         price::float AS price,
-         category_id AS "categoryId",
-         in_stock AS "inStock"
+        id,
+        name,
+        brand,
+        price::float AS price,
+        category_id AS "categoryId",
+        in_stock AS "inStock"
        FROM products
        ORDER BY id ASC`
     );
 
     const docs = result.rows.map((p) => ({
-      id: String(p.id),
+      id: String(p.id), // Solr id should be string
       name: p.name,
       brand: p.brand,
       price: p.price,
@@ -40,6 +40,7 @@ router.post("/solr/reindex", async (req, res, next) => {
       status: 502,
       code: "SOLR_INDEX_ERROR",
       message: "Failed to index products into Solr",
+      details: err?.message,
     });
   }
 });

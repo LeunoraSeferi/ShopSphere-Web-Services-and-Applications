@@ -3,11 +3,9 @@ info:
   title: ShopSphere Catalog Service API
   version: "1.0"
 
-#  FIX SERVER: you access catalog from HOST port 3004 (because of 3004:3002)
 servers:
   - url: http://localhost:3004/api/v1
 
-#  ADD SECURITY SCHEME (this enables the "Authorize" button)
 components:
   securitySchemes:
     bearerAuth:
@@ -22,10 +20,8 @@ paths:
       responses:
         "200":
           description: OK
-
     post:
       summary: Create product (ADMIN only)
-      #  JWT required
       security:
         - bearerAuth: []
       requestBody:
@@ -83,7 +79,6 @@ paths:
 
     put:
       summary: Update product (ADMIN only)
-      #  JWT required
       security:
         - bearerAuth: []
       parameters:
@@ -128,7 +123,6 @@ paths:
 
     delete:
       summary: Delete product (ADMIN only)
-      #  JWT required
       security:
         - bearerAuth: []
       parameters:
@@ -156,7 +150,6 @@ paths:
 
     post:
       summary: Create category (ADMIN only)
-      #  JWT required
       security:
         - bearerAuth: []
       requestBody:
@@ -198,7 +191,6 @@ paths:
 
     put:
       summary: Update category (ADMIN only)
-      #  JWT required
       security:
         - bearerAuth: []
       parameters:
@@ -229,7 +221,6 @@ paths:
 
     delete:
       summary: Delete category (ADMIN only)
-      #  JWT required
       security:
         - bearerAuth: []
       parameters:
@@ -247,3 +238,70 @@ paths:
           description: Forbidden (not admin)
         "404":
           description: Not found
+
+  /solr/reindex:
+    post:
+      summary: Reindex products from Postgres into Apache Solr
+      responses:
+        "200":
+          description: Indexed successfully
+        "502":
+          description: Solr indexing error
+
+  /search/products:
+    get:
+      summary: Search products using Apache Solr index (advanced queries)
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+          example: '(brand:"BrandX" OR brand:"Guess Brand") AND price:[50 TO 120]'
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - in: query
+          name: brand
+          required: false
+          schema:
+            type: string
+          example: BrandX
+        - in: query
+          name: inStock
+          required: false
+          schema:
+            type: boolean
+          example: true
+        - in: query
+          name: minPrice
+          required: false
+          schema:
+            type: number
+          example: 50
+        - in: query
+          name: maxPrice
+          required: false
+          schema:
+            type: number
+          example: 120
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+          example: "price asc"
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "200":
+          description: Solr search results
+        "500":
+          description: Solr query failed

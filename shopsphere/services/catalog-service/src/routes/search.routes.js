@@ -28,7 +28,10 @@ router.get("/search/products", async (req, res, next) => {
     const fq = [];
     if (category) fq.push(`categoryId:${category}`);
     if (brand) fq.push(`brand:"${brand}"`);
-    if (inStock !== undefined) fq.push(`inStock:${inStock}`);
+    if (inStock === "true" || inStock === "false") {
+  fq.push(`inStock:${inStock}`);
+}
+
 
     // price range
     if (minPrice || maxPrice) {
