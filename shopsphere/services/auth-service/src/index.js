@@ -9,6 +9,7 @@ import YAML from "yamljs";
 import authRoutes from "./routes/auth.routes.js";
 import usersRoutes from "./routes/users.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import { seedAdmin } from "./db/seedAdmin.js";
 
 dotenv.config();
 
@@ -27,12 +28,17 @@ const swaggerDocument = YAML.load("./src/docs/swagger.yaml");
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Health check
-app.get("/health", (req, res) => res.json({ status: "ok", service: "auth-service" }));
+app.get("/health", (req, res) =>
+  res.json({ status: "ok", service: "auth-service" })
+);
 
 // Error handler last
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
+
+await seedAdmin();
+
 app.listen(PORT, () => {
   console.log(`Auth service running on http://localhost:${PORT}`);
   console.log(`Swagger docs: http://localhost:${PORT}/docs`);
