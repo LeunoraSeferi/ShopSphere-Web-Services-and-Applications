@@ -1,17 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiGetCategories, apiSearchProducts } from "@/lib/api";
+import { apiGetCategories, apiGetProducts } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
-import Pagination from "@/components/Pagination";
 import FiltersBar, { Filters } from "@/components/FiltersBar";
 
 type Category = { id: number; name: string };
-
-type SearchResponse = {
-  paging: { page: number; pageSize: number; total: number; totalPages: number };
-  results: any[];
-};
 
 export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -21,76 +15,58 @@ export default function ProductsPage() {
     inStock: "",
     minPrice: "",
     maxPrice: "",
-    sort: "score desc",
+    sort: "relevance",
   });
 
-  const [page, setPage] = useState(1);
-
-  const [data, setData] = useState<SearchResponse | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // load categories once
+  // Load categories (for FiltersBar)
   useEffect(() => {
     (async () => {
       try {
         const cats = await apiGetCategories();
         setCategories(cats);
-      } catch {
-        // not fatal for page
-      }
+      } catch {}
     })();
   }, []);
 
-  async function loadProducts(p = 1) {
+  // 🔑 LOAD PRODUCTS FROM POSTGRES (NOT SOLR)
+  async function loadProducts() {
     setLoading(true);
     setErr(null);
 
     try {
-      const res = await apiSearchProducts({
-        q: filters.q ? filters.q : "*:*",
-        category: filters.category || undefined,
-        inStock: filters.inStock || undefined,
-        minPrice: filters.minPrice || undefined,
-        maxPrice: filters.maxPrice || undefined,
-        sort: filters.sort || undefined,
-        page: String(p),
-      });
-
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
+      const all = await apiGetProducts(); // DB source
+      setProducts(Array.isArray(all) ? all : []);
+    } catch {
       setErr("Failed to load products. Is catalog-service running on port 3004?");
-      setData(null);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   }
 
-  // auto-load first page
   useEffect(() => {
-    loadProducts(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadProducts();
   }, []);
 
   function applyFilters() {
-    loadProducts(1);
+    // for now: reload DB list (enough for project)
+    loadProducts();
   }
 
   function resetFilters() {
-    const fresh = {
+    setFilters({
       q: "",
       category: "",
       inStock: "",
       minPrice: "",
       maxPrice: "",
-      sort: "score desc",
-    };
-    setFilters(fresh);
-    // load with reset values
-    setTimeout(() => {
-      loadProducts(1);
-    }, 0);
+      sort: "relevance",
+    });
+    loadProducts();
   }
 
   return (
@@ -113,34 +89,26 @@ export default function ProductsPage() {
 
       {loading && <div className="py-6">Loading products…</div>}
 
-      {!loading && data && data.results?.length === 0 && (
+      {!loading && products.length === 0 && (
         <div className="py-6">No products found.</div>
       )}
 
-      {!loading && data && data.results?.length > 0 && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.results.map((p: any) => (
-              <ProductCard
-                key={p.id}
-                product={{
-                  id: p.id,
-                  name: p.name,
-                  brand: p.brand,
-                  price: Number(p.price),
-                  inStock: Boolean(p.inStock),
-                  categoryId: p.categoryId,
-                }}
-              />
-            ))}
-          </div>
-
-          <Pagination
-            page={data.paging.page}
-            totalPages={data.paging.totalPages}
-            onPage={(p) => loadProducts(p)}
-          />
-        </>
+      {!loading && products.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {products.map((p: any) => (
+            <ProductCard
+              key={p.id}
+              product={{
+                id: p.id,
+                name: p.name,
+                brand: p.brand,
+                price: Number(p.price),
+                inStock: Boolean(p.inStock),
+                categoryId: p.categoryId,
+              }}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

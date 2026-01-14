@@ -3,11 +3,7 @@ import { apiGetProduct } from "@/lib/api";
 import { getProductImage } from "@/lib/images";
 import AddToCart from "./AddToCart";
 
-export default async function ProductDetails({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function ProductDetails({ params }: { params: { id: string } }) {
   const product = await apiGetProduct(Number(params.id));
 
   return (

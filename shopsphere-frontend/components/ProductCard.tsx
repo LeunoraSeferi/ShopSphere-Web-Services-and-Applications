@@ -8,7 +8,7 @@ import { getProductImage } from "@/lib/images";
 type Product = {
   id: string | number;
   name: string;
-  brand?: string; // ✅ optional (Solr docs can differ)
+  brand?: string; 
   price: number;
   inStock: boolean;
   categoryId?: number;
@@ -17,16 +17,16 @@ type Product = {
 export default function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
 
-  const productId = Number(product.id); // ✅ always convert to number for cart
+  const productId = Number(product.id); 
 
   return (
     <div className="rounded-lg border p-4 flex flex-col gap-3">
       {/* Image */}
       <Image
-        src={getProductImage(product.id)}
+        src={getProductImage(productId)}
         alt={product.name}
         width={500}
-        height={500}
+        height={200}
         className="rounded-lg object-cover w-full h-48"
       />
 
