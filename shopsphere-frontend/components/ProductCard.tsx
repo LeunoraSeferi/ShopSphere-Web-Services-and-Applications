@@ -8,7 +8,7 @@ import { getProductImage } from "@/lib/images";
 type Product = {
   id: string | number;
   name: string;
-  brand?: string; 
+  brand?: string;
   price: number;
   inStock: boolean;
   categoryId?: number;
@@ -17,11 +17,24 @@ type Product = {
 export default function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
 
-  const productId = Number(product.id); 
+  const productId = Number(product.id);
+  const outOfStock = !product.inStock;
+
+  function handleAdd() {
+    if (outOfStock) return; 
+    add(
+      {
+        productId,
+        name: product.name,
+        brand: product.brand || "—",
+        price: product.price,
+      },
+      1
+    );
+  }
 
   return (
     <div className="rounded-lg border p-4 flex flex-col gap-3">
-      {/* Image */}
       <Image
         src={getProductImage(productId)}
         alt={product.name}
@@ -30,7 +43,6 @@ export default function ProductCard({ product }: { product: Product }) {
         className="rounded-lg object-cover w-full h-48"
       />
 
-      {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="font-semibold">{product.name}</h3>
@@ -46,10 +58,8 @@ export default function ProductCard({ product }: { product: Product }) {
         </span>
       </div>
 
-      {/* Price */}
       <div className="text-lg font-bold">${product.price}</div>
 
-      {/* Actions */}
       <div className="mt-auto flex gap-2">
         <Link
           href={`/products/${product.id}`}
@@ -59,20 +69,10 @@ export default function ProductCard({ product }: { product: Product }) {
         </Link>
 
         <button
-          onClick={() =>
-            add(
-              {
-                productId,
-                name: product.name,
-                brand: product.brand || "—",
-                price: product.price,
-              },
-              1
-            )
-          }
+          onClick={handleAdd}
           className="bg-black text-white rounded px-3 py-2 text-sm focus-visible:ring disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label={`Add ${product.name} to cart`}
-          disabled={!product.inStock}
+          disabled={outOfStock} 
         >
           Add to cart
         </button>

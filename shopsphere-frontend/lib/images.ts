@@ -10,7 +10,7 @@ export function getProductImage(value: unknown) {
     //  by ID
     "1": "/images/products/parfum-a.jpg",
     "2": "/images/products/parfum-b.jpg",
-    "3": "/images/products/default-product.jpg", // optional
+    "3": "/images/products/default-product.jpg",
     "4": "/images/products/sol.jpg",
 
     //  by NAME (must be lowercase because we use .toLowerCase())

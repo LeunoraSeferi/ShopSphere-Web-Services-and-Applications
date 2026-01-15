@@ -3,13 +3,34 @@ import { apiGetProduct } from "@/lib/api";
 import { getProductImage } from "@/lib/images";
 import AddToCart from "./AddToCart";
 
-export default async function ProductDetails({ params }: { params: { id: string } }) {
-  const product = await apiGetProduct(Number(params.id));
+export default async function ProductDetails({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  
+  const { id } = await params;
+  const productId = Number(id);
+
+  if (Number.isNaN(productId) || productId <= 0) {
+    return <div className="py-6">Invalid product id.</div>;
+  }
+
+  let product: any;
+  try {
+    product = await apiGetProduct(productId);
+  } catch (e: any) {
+    return (
+      <div className="py-6 text-red-400">
+        Failed to fetch product: {e?.message || "Unknown error"}
+      </div>
+    );
+  }
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <Image
-        src={getProductImage(product?.id)}
+        src={getProductImage(Number(product?.id))}
         alt={String(product?.name || "Product image")}
         width={500}
         height={500}
@@ -20,9 +41,22 @@ export default async function ProductDetails({ params }: { params: { id: string 
       <div>
         <h1 className="text-2xl font-bold">{product.name}</h1>
         <p className="text-gray-600">{product.brand}</p>
-        <p className="text-xl font-semibold mt-2">${product.price}</p>
 
-        <AddToCart product={product} />
+        <p className="text-xl font-semibold mt-2">
+          ${Number(product.price).toFixed(2)}
+        </p>
+
+        <div className="mt-2 text-sm">
+          {product.inStock ? (
+            <span className="text-green-400">In stock</span>
+          ) : (
+            <span className="text-red-400">Out of stock</span>
+          )}
+        </div>
+
+        <div className="mt-4">
+          <AddToCart product={product} />
+        </div>
       </div>
     </div>
   );

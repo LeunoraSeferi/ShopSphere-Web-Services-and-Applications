@@ -8,7 +8,7 @@ export type Filters = {
   inStock: string; // "", "true", "false"
   minPrice: string;
   maxPrice: string;
-  sort: string;
+  sort: string; // "score desc" | "price asc" | "price desc"
 };
 
 export default function FiltersBar({

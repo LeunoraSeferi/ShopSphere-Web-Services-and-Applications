@@ -1,28 +1,26 @@
-// lib/api.ts
 
-type LoginPayload = { email: string; password: string };
-
-// Ports (adjust only if yours differ)
-const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE ?? "http://localhost:3001/api/v1";
-const CATALOG_BASE = process.env.NEXT_PUBLIC_CATALOG_BASE ?? "http://localhost:3004/api/v1";
-const ORDERS_BASE = process.env.NEXT_PUBLIC_ORDERS_BASE ?? "http://localhost:3003/api/v1";
+// Uses API Gateway base URL
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000/api/v1";
 
 type HeadersMap = Record<string, string>;
+type LoginPayload = { email: string; password: string };
 
 function authHeader(token?: string | null): HeadersMap {
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  // If token already contains "Bearer ", keep it safe
+  if (!token) return {};
+  return token.startsWith("Bearer ")
+    ? { Authorization: token }
+    : { Authorization: `Bearer ${token}` };
 }
 
-// Helper fetch
 async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const headers: HeadersMap = {
-    "Content-Type": "application/json",
-    ...(options.headers as HeadersMap),
-  };
-
   const res = await fetch(url, {
     ...options,
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers as HeadersMap),
+    },
     cache: "no-store",
   });
 
@@ -30,7 +28,7 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
     let msg = `Request failed (${res.status})`;
     try {
       const data = await res.json();
-      msg = (data as any)?.message || msg;
+      msg = (data as any)?.message || (data as any)?.error || msg;
     } catch {}
     throw new Error(msg);
   }
@@ -39,62 +37,43 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-// -------------------------
+// =====================
 // AUTH
-// -------------------------
-export async function apiLogin(payload: LoginPayload) {
-  return apiFetch<{ token: string; user: { id: number; name: string; role: "admin" | "customer" } }>(
-    `${AUTH_BASE}/auth/login`,
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }
-  );
-}
-
-// -------------------------
-// CATEGORIES (Catalog)
-// -------------------------
-export async function apiGetCategories() {
-  return apiFetch<Array<{ id: number; name: string }>>(`${CATALOG_BASE}/categories`);
-}
-
-export async function apiCreateCategory(token: string, payload: { name: string }) {
-  return apiFetch(`${CATALOG_BASE}/categories`, {
+// =====================
+export function apiLogin(payload: LoginPayload) {
+  return apiFetch<{
+    token: string;
+    user: { id: number; name: string; role: "admin" | "customer" };
+  }>(`${API_BASE}/auth/login`, {
     method: "POST",
-    headers: authHeader(token),
     body: JSON.stringify(payload),
   });
 }
 
-// -------------------------
-// PRODUCTS (Catalog)
-// -------------------------
-export async function apiGetProducts() {
-  return apiFetch<any[]>(`${CATALOG_BASE}/products`);
+// =====================
+// PRODUCTS (public GET)
+// =====================
+export function apiGetProducts() {
+  return apiFetch<any[]>(`${API_BASE}/products`);
 }
 
-export async function apiGetProduct(id: number) {
-  return apiFetch<any>(`${CATALOG_BASE}/products/${id}`);
+export function apiGetProduct(id: number) {
+  return apiFetch<any>(`${API_BASE}/products/${id}`);
 }
 
-export async function apiCreateProduct(
-  token: string,
-  payload: { name: string; brand: string; price: number; inStock: boolean; categoryId: number }
-) {
-  return apiFetch(`${CATALOG_BASE}/products`, {
-    method: "POST",
-    headers: authHeader(token),
-    body: JSON.stringify(payload),
-  });
+// =====================
+// CATEGORIES (public GET)
+// =====================
+export function apiGetCategories() {
+  return apiFetch<any[]>(`${API_BASE}/categories`);
 }
 
-// -------------------------
-// SEARCH (Solr)
-// -------------------------
-export async function apiSearchProducts(params: {
+// =====================
+// SEARCH (Solr) - via Gateway
+// =====================
+export function apiSearchProducts(params: {
   q: string; // "*" or "*:*" or "perfume"
-  category?: string;
+  category?: string; // categoryId
   inStock?: string; // "true" | "false"
   minPrice?: string;
   maxPrice?: string;
@@ -102,10 +81,11 @@ export async function apiSearchProducts(params: {
   page?: number; // 1-based
   pageSize?: number;
 }) {
-  const url = new URL(`${CATALOG_BASE}/search/products`);
+  const url = new URL(`${API_BASE}/search/products`);
 
   url.searchParams.set("q", params.q || "*");
 
+  // keep same param names you used before, but routed via gateway
   if (params.category) url.searchParams.set("categoryId", params.category);
   if (params.inStock) url.searchParams.set("inStock", params.inStock);
   if (params.minPrice) url.searchParams.set("minPrice", params.minPrice);
@@ -121,34 +101,95 @@ export async function apiSearchProducts(params: {
   }>(url.toString());
 }
 
-// -------------------------
-// ORDERS
-// -------------------------
-export async function apiCreateOrder(
-  token: string,
-  payload: {
-    customerId: number;
-    items: Array<{ productId: number; qty: number; unitPrice: number }>;
-    status: string;
-  }
-) {
-  return apiFetch(`${ORDERS_BASE}/orders`, {
+// =====================
+// ADMIN: PRODUCTS CRUD
+// =====================
+export function apiCreateProduct(token: string, payload: any) {
+  return apiFetch<any>(`${API_BASE}/products`, {
     method: "POST",
-    headers: authHeader(token),
+    headers: { ...authHeader(token) },
     body: JSON.stringify(payload),
   });
 }
 
-export async function apiGetOrders(token: string) {
-  return apiFetch<any[]>(`${ORDERS_BASE}/orders`, {
-    headers: authHeader(token),
+export function apiUpdateProduct(token: string, id: number, payload: any) {
+  return apiFetch<any>(`${API_BASE}/products/${id}`, {
+    method: "PUT",
+    headers: { ...authHeader(token) },
+    body: JSON.stringify(payload),
   });
 }
 
-export async function apiUpdateOrderStatus(token: string, orderId: number, status: string) {
-  return apiFetch(`${ORDERS_BASE}/orders/${orderId}`, {
+export function apiDeleteProduct(token: string, id: number) {
+  return apiFetch<void>(`${API_BASE}/products/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeader(token) },
+  });
+}
+
+// =====================
+// ADMIN: CATEGORIES CRUD
+// =====================
+export function apiCreateCategory(token: string, payload: { name: string }) {
+  return apiFetch<any>(`${API_BASE}/categories`, {
+    method: "POST",
+    headers: { ...authHeader(token) },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function apiUpdateCategory(
+  token: string,
+  id: number,
+  payload: { name: string }
+) {
+  return apiFetch<any>(`${API_BASE}/categories/${id}`, {
     method: "PUT",
-    headers: authHeader(token),
+    headers: { ...authHeader(token) },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function apiDeleteCategory(token: string, id: number) {
+  return apiFetch<void>(`${API_BASE}/categories/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeader(token) },
+  });
+}
+
+// =====================
+// ORDERS (customer + admin)
+// =====================
+
+// Customer creates order
+export function apiCreateOrder(
+  token: string,
+  payload: {
+    customerId: number;
+    items: Array<{ productId: number; qty: number; unitPrice: number }>;
+    status: string; // e.g., "PENDING"
+  }
+) {
+  return apiFetch<any>(`${API_BASE}/orders`, {
+    method: "POST",
+    headers: { ...authHeader(token) },
+    body: JSON.stringify(payload),
+  });
+}
+
+// Admin (and/or user) gets orders.
+// In many implementations: admin sees all, customer sees own.
+export function apiGetOrders(token: string) {
+  return apiFetch<any[]>(`${API_BASE}/orders`, {
+    headers: { ...authHeader(token) },
+  });
+}
+
+// Admin changes status
+export function apiUpdateOrderStatus(token: string, id: number, status: string) {
+  return apiFetch<any>(`${API_BASE}/orders/${id}`, {
+    method: "PUT",
+    headers: { ...authHeader(token) },
     body: JSON.stringify({ status }),
   });
 }

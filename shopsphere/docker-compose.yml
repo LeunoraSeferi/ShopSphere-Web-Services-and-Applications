@@ -154,7 +154,7 @@ services:
       - PORT=4000
       - REDIS_URL=redis://redis:6379
       - CATALOG_URL=http://catalog-service:3002/api/v1
-      - ORDER_URL=http://order-service:3003/api/v1
+      - ORDERS_URL=http://order-service:3003/api/v1
       - AUTH_URL=http://auth-service:3001/api/v1
     depends_on:
       - catalog-service

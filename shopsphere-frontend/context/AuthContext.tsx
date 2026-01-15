@@ -10,6 +10,7 @@ type AuthCtx = {
   token: string | null;
   user: User | null;
   isAdmin: boolean;
+  requireToken: () => string; 
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
@@ -38,8 +39,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }
 
+  function requireToken() {
+    if (!token) throw new Error("Missing token. Please login again.");
+    return token;
+  }
+
   return (
-    <AuthContext.Provider value={{ token, user, isAdmin: user?.role === "admin", login, logout }}>
+    <AuthContext.Provider
+      value={{
+        token,
+        user,
+        isAdmin: user?.role === "admin",
+        requireToken,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
