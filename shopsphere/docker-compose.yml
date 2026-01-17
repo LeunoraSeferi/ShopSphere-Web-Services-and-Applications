@@ -36,8 +36,6 @@ services:
     environment:
       - PORT=3001
       - JWT_SECRET=supersecret
-
-      # POSTGRES (inside Docker network)
       - DB_HOST=auth-db
       - DB_PORT=5432
       - DB_NAME=authdb
@@ -108,8 +106,6 @@ services:
       - PORT=3002
       - JWT_SECRET=supersecret
       - SOLR_URL=http://solr:8983/solr/products
-
-      # Postgres connection (INSIDE docker network)
       - DB_HOST=catalog-db
       - DB_PORT=5432
       - DB_NAME=catalogdb
@@ -131,8 +127,6 @@ services:
     environment:
       - PORT=3003
       - JWT_SECRET=supersecret
-
-      # Postgres connection (INSIDE docker network)
       - DB_HOST=order-db
       - DB_PORT=5432
       - DB_NAME=orderdb
@@ -143,7 +137,7 @@ services:
     restart: unless-stopped
 
   # ---------------------------
-  # GATEWAY
+  # GATEWAY  ✅ (MUST be indented under services)
   # ---------------------------
   gateway:
     build: ./gateway

@@ -37,11 +37,14 @@ await connectRedis();
 // ======================
 // Base URLs
 // ======================
-// Inside Docker: use service names from docker-compose (recommended)
+// Inside Docker: use docker-compose service names (recommended)
 // Locally: fall back to localhost
-const CATALOG_URL = process.env.CATALOG_URL || "http://localhost:3002/api/v1";
-const ORDERS_URL = process.env.ORDERS_URL || "http://localhost:3003/api/v1";
-const AUTH_URL = process.env.AUTH_URL || "http://localhost:3001/api/v1";
+const CATALOG_URL =
+  process.env.CATALOG_URL || "http://localhost:3004/api/v1"; // host port for catalog
+const ORDERS_URL =
+  process.env.ORDERS_URL || "http://localhost:3003/api/v1";
+const AUTH_URL =
+  process.env.AUTH_URL || "http://localhost:3001/api/v1";
 
 // Forward Authorization header (Bearer token) to downstream services
 function forwardAuth(req) {
@@ -57,7 +60,7 @@ function forwardAuth(req) {
  *  Products:    /api/v1/products (GET/POST) + /api/v1/products/:id (GET/PUT/DELETE)
  *  Categories:  /api/v1/categories (GET/POST) + /api/v1/categories/:id (PUT/DELETE)
  *  Search:      /api/v1/search/products (GET)
- *  Orders:      /api/v1/orders (GET admin) + /api/v1/orders/:id (PUT admin)
+ *  Orders:      /api/v1/orders (GET admin, POST user) + /api/v1/orders/:id (PUT admin)
  * ======================================
  */
 
@@ -269,8 +272,10 @@ app.get("/api/v1/search/products", async (req, res) => {
 });
 
 // ======================
-// ORDERS (Order service) - ADMIN ONLY (order-service enforces it)
+// ORDERS (Order service)
 // ======================
+
+// GET all orders (ADMIN enforced by order-service)
 app.get("/api/v1/orders", async (req, res) => {
   try {
     const response = await axios.get(`${ORDERS_URL}/orders`, {
@@ -288,11 +293,32 @@ app.get("/api/v1/orders", async (req, res) => {
   }
 });
 
-app.put("/api/v1/orders/:id", async (req, res) => {
+//  POST create order (USER) - checkout
+app.post("/api/v1/orders", async (req, res) => {
   try {
-    const response = await axios.put(`${ORDERS_URL}/orders/${req.params.id}`, req.body, {
+    const response = await axios.post(`${ORDERS_URL}/orders`, req.body, {
       headers: { ...forwardAuth(req) },
     });
+    return res.status(201).json(response.data);
+  } catch (err) {
+    const status = err?.response?.status || 400;
+    return res.status(status).json(
+      err?.response?.data || {
+        error: "ORDERS_PROXY_ERROR",
+        message: "Create order failed",
+      }
+    );
+  }
+});
+
+// PUT update order status (ADMIN enforced by order-service)
+app.put("/api/v1/orders/:id", async (req, res) => {
+  try {
+    const response = await axios.put(
+      `${ORDERS_URL}/orders/${req.params.id}`,
+      req.body,
+      { headers: { ...forwardAuth(req) } }
+    );
     return res.json(response.data);
   } catch (err) {
     const status = err?.response?.status || 400;

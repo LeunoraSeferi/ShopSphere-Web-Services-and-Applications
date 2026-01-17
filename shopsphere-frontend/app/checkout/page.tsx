@@ -15,17 +15,13 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // cart empty
   if (items.length === 0) {
     return (
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Checkout</h1>
         <div className="border rounded p-4">
           <p className="text-gray-500">Your cart is empty.</p>
-          <Link
-            className="inline-block mt-3 border rounded px-3 py-2 focus-visible:ring"
-            href="/products"
-          >
+          <Link className="inline-block mt-3 border rounded px-3 py-2" href="/products">
             Go to products
           </Link>
         </div>
@@ -33,19 +29,13 @@ export default function CheckoutPage() {
     );
   }
 
-  // not logged in
   if (!user || !token) {
     return (
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Checkout</h1>
         <div className="border rounded p-4">
-          <p role="alert" className="text-red-400">
-            You must login to checkout.
-          </p>
-          <Link
-            href="/login?next=/checkout"
-            className="inline-block mt-3 border rounded px-3 py-2 focus-visible:ring"
-          >
+          <p className="text-red-400">You must login to checkout.</p>
+          <Link className="inline-block mt-3 border rounded px-3 py-2" href="/login?next=/checkout">
             Go to Login
           </Link>
         </div>
@@ -57,7 +47,6 @@ export default function CheckoutPage() {
     setLoading(true);
     setMsg(null);
 
-    // ✅ make TypeScript 100% happy inside function
     const safeUser = user;
     const safeToken = token;
 
@@ -69,19 +58,20 @@ export default function CheckoutPage() {
 
     try {
       const payload = {
-        customerId: Number(safeUser.id), // ✅ fix user.id error
-        items: items.map((x) => ({
-          productId: x.productId,
-          qty: x.qty,
-          unitPrice: x.price,
-        })),
+        customerId: Number(safeUser.id),
         status: "PENDING",
+        items: items.map((x) => ({
+          productId: Number(x.productId),
+          qty: Number(x.qty),
+          unitPrice: Number(x.price),
+        })),
       };
 
-      await apiCreateOrder(safeToken, payload); // ✅ fix token error
+      await apiCreateOrder(safeToken, payload);
 
       clear();
-      router.push("/orders");
+      router.push("/orders"); // or /my-orders if you have that page
+      router.refresh();
     } catch (e: any) {
       setMsg(e?.message || "Failed to place order.");
     } finally {
@@ -98,10 +88,7 @@ export default function CheckoutPage() {
 
         <div className="border-t pt-3 space-y-2">
           {items.map((x) => (
-            <div
-              key={x.productId}
-              className="flex items-center justify-between text-sm"
-            >
+            <div key={x.productId} className="flex justify-between text-sm">
               <div>
                 {x.name} × {x.qty}
               </div>
@@ -110,21 +97,17 @@ export default function CheckoutPage() {
           ))}
         </div>
 
-        <div className="border-t pt-3 flex items-center justify-between font-semibold">
+        <div className="border-t pt-3 flex justify-between font-semibold">
           <span>Total</span>
           <span>${total.toFixed(2)}</span>
         </div>
 
-        {msg && (
-          <p role="alert" className="text-red-400">
-            {msg}
-          </p>
-        )}
+        {msg && <p className="text-red-400">{msg}</p>}
 
         <button
           onClick={placeOrder}
           disabled={loading}
-          className="bg-black text-white rounded px-4 py-2 focus-visible:ring disabled:opacity-50"
+          className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
         >
           {loading ? "Placing..." : "Place order"}
         </button>
