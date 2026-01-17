@@ -58,7 +58,7 @@ export default function AdminProductsPage() {
     try {
       const t = token ?? "";
       await apiDeleteProduct(t, id);
-      setMsg("✅ Product deleted");
+      setMsg(" Product deleted");
       await load();
     } catch (e: any) {
       setMsg(e?.message || "Delete failed");
@@ -76,7 +76,7 @@ export default function AdminProductsPage() {
         inStock: !Boolean(p.inStock),
         categoryId: Number(p.categoryId),
       });
-      setMsg("✅ Stock updated");
+      setMsg(" Stock updated");
       await load();
     } catch (e: any) {
       setMsg(e?.message || "Update failed");

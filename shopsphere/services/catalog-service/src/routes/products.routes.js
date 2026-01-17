@@ -6,15 +6,35 @@ import { requireAuth, requireRole } from "../middlewares/authJwt.js";
 
 const router = express.Router();
 
+// CREATE schema (admin create)
 const productSchema = z.object({
   name: z.string().min(2),
   price: z.number().positive(),
   categoryId: z.number().int().positive(),
   brand: z.string().min(1),
   inStock: z.boolean(),
+  // description field
+  description: z.string().optional().default(""),
 });
 
-//  GET all (public)
+// UPDATE schema (admin update - partial)
+const productUpdateSchema = z
+  .object({
+    name: z.string().min(2).optional(),
+    price: z.number().positive().optional(),
+    categoryId: z.number().int().positive().optional(),
+    brand: z.string().min(1).optional(),
+    inStock: z.boolean().optional(),
+    // description field
+    description: z.string().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "No fields provided",
+  });
+
+// =====================
+// GET all (public)
+// =====================
 router.get("/products", async (req, res, next) => {
   try {
     const result = await query(
@@ -24,7 +44,8 @@ router.get("/products", async (req, res, next) => {
          price::float AS price, 
          category_id AS "categoryId", 
          brand, 
-         in_stock AS "inStock"
+         in_stock AS "inStock",
+         COALESCE(description, '') AS description
        FROM products
        ORDER BY id ASC`
     );
@@ -40,7 +61,9 @@ router.get("/products", async (req, res, next) => {
   }
 });
 
-//  GET by id (public)
+// =====================
+// GET by id (public)
+// =====================
 router.get("/products/:id", async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -52,7 +75,8 @@ router.get("/products/:id", async (req, res, next) => {
          price::float AS price, 
          category_id AS "categoryId", 
          brand, 
-         in_stock AS "inStock"
+         in_stock AS "inStock",
+         COALESCE(description, '') AS description
        FROM products
        WHERE id=$1`,
       [id]
@@ -67,7 +91,9 @@ router.get("/products/:id", async (req, res, next) => {
   }
 });
 
-//  POST create (ADMIN only)
+// =====================
+// POST create (ADMIN only)
+// =====================
 router.post("/products", requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const body = productSchema.parse(req.body);
@@ -79,20 +105,24 @@ router.post("/products", requireAuth, requireRole("admin"), async (req, res, nex
     }
 
     const insert = await query(
-      `INSERT INTO products (name, price, category_id, brand, in_stock)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO products (name, price, category_id, brand, in_stock, description)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING 
          id, 
          name, 
          price::float AS price, 
          category_id AS "categoryId", 
          brand, 
-         in_stock AS "inStock"`,
-      [body.name, body.price, body.categoryId, body.brand, body.inStock]
+         in_stock AS "inStock",
+         COALESCE(description, '') AS description`,
+      [body.name, body.price, body.categoryId, body.brand, body.inStock, body.description || ""]
     );
 
     const newProduct = insert.rows[0];
-    res.status(201).json({ ...newProduct, _links: productLinks(newProduct.id, newProduct.categoryId) });
+    res.status(201).json({
+      ...newProduct,
+      _links: productLinks(newProduct.id, newProduct.categoryId),
+    });
   } catch (e) {
     next({
       status: 400,
@@ -102,20 +132,24 @@ router.post("/products", requireAuth, requireRole("admin"), async (req, res, nex
   }
 });
 
-//  PUT update (ADMIN only)
+// =====================
+// PUT update (ADMIN only)
+// =====================
 router.put("/products/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
 
     // Check product exists
     const existing = await query(`SELECT id FROM products WHERE id=$1`, [id]);
-    if (existing.rowCount === 0) return next({ status: 404, code: "NOT_FOUND", message: "Product not found" });
+    if (existing.rowCount === 0) {
+      return next({ status: 404, code: "NOT_FOUND", message: "Product not found" });
+    }
 
-    const { name, price, categoryId, brand, inStock } = req.body;
+    const body = productUpdateSchema.parse(req.body);
 
     // Validate category if provided
-    if (categoryId !== undefined) {
-      const cat = await query(`SELECT id FROM categories WHERE id=$1`, [Number(categoryId)]);
+    if (body.categoryId !== undefined) {
+      const cat = await query(`SELECT id FROM categories WHERE id=$1`, [body.categoryId]);
       if (cat.rowCount === 0) {
         return next({ status: 400, code: "VALIDATION_ERROR", message: "Invalid categoryId" });
       }
@@ -126,25 +160,29 @@ router.put("/products/:id", requireAuth, requireRole("admin"), async (req, res, 
     const values = [];
     let idx = 1;
 
-    if (name !== undefined) {
+    if (body.name !== undefined) {
       fields.push(`name=$${idx++}`);
-      values.push(name);
+      values.push(body.name);
     }
-    if (price !== undefined) {
+    if (body.price !== undefined) {
       fields.push(`price=$${idx++}`);
-      values.push(Number(price));
+      values.push(body.price);
     }
-    if (categoryId !== undefined) {
+    if (body.categoryId !== undefined) {
       fields.push(`category_id=$${idx++}`);
-      values.push(Number(categoryId));
+      values.push(body.categoryId);
     }
-    if (brand !== undefined) {
+    if (body.brand !== undefined) {
       fields.push(`brand=$${idx++}`);
-      values.push(brand);
+      values.push(body.brand);
     }
-    if (inStock !== undefined) {
+    if (body.inStock !== undefined) {
       fields.push(`in_stock=$${idx++}`);
-      values.push(Boolean(inStock));
+      values.push(body.inStock);
+    }
+    if (body.description !== undefined) {
+      fields.push(`description=$${idx++}`);
+      values.push(body.description);
     }
 
     if (fields.length === 0) {
@@ -163,18 +201,25 @@ router.put("/products/:id", requireAuth, requireRole("admin"), async (req, res, 
          price::float AS price, 
          category_id AS "categoryId", 
          brand, 
-         in_stock AS "inStock"`,
+         in_stock AS "inStock",
+         COALESCE(description, '') AS description`,
       values
     );
 
     const p = updated.rows[0];
     res.json({ ...p, _links: productLinks(p.id, p.categoryId) });
   } catch (e) {
-    next({ status: 400, code: "VALIDATION_ERROR", message: "Invalid input" });
+    next({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: e?.errors?.[0]?.message || "Invalid input",
+    });
   }
 });
 
+// =====================
 // DELETE remove (ADMIN only)
+// =====================
 router.delete("/products/:id", requireAuth, requireRole("admin"), async (req, res, next) => {
   try {
     const id = Number(req.params.id);

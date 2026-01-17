@@ -25,15 +25,15 @@ export default function AdminEditProductPage() {
   const [categoryId, setCategoryId] = useState<number>(1);
   const [inStock, setInStock] = useState<boolean>(true);
 
+  // DESCRIPTION FIELD
+  const [description, setDescription] = useState("");
+
   async function load() {
     setMsg(null);
     setLoading(true);
 
     try {
-      const [p, cats] = await Promise.all([
-        apiGetProduct(id),
-        apiGetCategories(),
-      ]);
+      const [p, cats] = await Promise.all([apiGetProduct(id), apiGetCategories()]);
 
       setCategories(Array.isArray(cats) ? cats : []);
 
@@ -42,6 +42,9 @@ export default function AdminEditProductPage() {
       setPrice(Number(p?.price ?? 0));
       setCategoryId(Number(p?.categoryId ?? 1));
       setInStock(Boolean(p?.inStock));
+
+      //DESCRIPTION
+      setDescription(String(p?.description ?? ""));
     } catch (e: any) {
       setMsg(e?.message || "Failed to load product");
     } finally {
@@ -51,6 +54,7 @@ export default function AdminEditProductPage() {
 
   useEffect(() => {
     if (!Number.isNaN(id) && id > 0) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Guards
@@ -91,6 +95,9 @@ export default function AdminEditProductPage() {
         price: Number(price),
         inStock: Boolean(inStock),
         categoryId: Number(categoryId),
+
+        // DESCRIPTION FIELD
+        description: String(description).trim(),
       });
 
       setMsg("Product updated successfully");
@@ -177,6 +184,20 @@ export default function AdminEditProductPage() {
             />
             <span className="text-sm text-gray-200">In Stock</span>
           </label>
+
+          {/*  DESCRIPTION */}
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Description</label>
+            <textarea
+              className="w-full border rounded px-3 py-2 bg-black min-h-[120px]"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Write a short product description..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              This will be shown on the “View details” page.
+            </p>
+          </div>
 
           <button className="border rounded px-3 py-2" type="submit">
             Save Changes

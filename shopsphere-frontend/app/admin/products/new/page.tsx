@@ -22,10 +22,13 @@ export default function AdminNewProductPage() {
   const [inStock, setInStock] = useState(true);
   const [categoryId, setCategoryId] = useState<number | "">("");
 
+  // description field
+  const [description, setDescription] = useState("");
+
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // 🔒 admin guard
+  //  admin guard
   if (!user || !token || !isAdmin) {
     return (
       <div className="max-w-3xl mx-auto">
@@ -37,7 +40,6 @@ export default function AdminNewProductPage() {
     );
   }
 
-  // ✅ TS-safe token
   const authToken = token;
 
   useEffect(() => {
@@ -65,6 +67,9 @@ export default function AdminNewProductPage() {
     if (!price || price <= 0) return setMsg("Price must be > 0.");
     if (categoryId === "") return setMsg("Please choose a category.");
 
+    // description validation
+    if (!description.trim()) return setMsg("Description is required.");
+
     try {
       setSaving(true);
 
@@ -74,9 +79,11 @@ export default function AdminNewProductPage() {
         price: Number(price),
         inStock,
         categoryId: Number(categoryId),
+
+        // description field
+        description: description.trim(),
       });
 
-      // ✅ Refresh + go back
       router.push("/products");
       router.refresh();
     } catch (err: any) {
@@ -126,6 +133,7 @@ export default function AdminNewProductPage() {
               id="price"
               type="number"
               min={0}
+              step="0.01"
               value={price}
               onChange={(e) => setPrice(Number(e.target.value))}
               className="w-full rounded border px-3 py-2 focus-visible:ring bg-transparent"
@@ -139,7 +147,9 @@ export default function AdminNewProductPage() {
             <select
               id="categoryId"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) =>
+                setCategoryId(e.target.value ? Number(e.target.value) : "")
+              }
               className="w-full rounded border px-3 py-2 focus-visible:ring bg-transparent"
               disabled={loadingCats}
             >
@@ -151,7 +161,9 @@ export default function AdminNewProductPage() {
               ))}
             </select>
 
-            {loadingCats && <p className="text-xs text-gray-400">Loading categories...</p>}
+            {loadingCats && (
+              <p className="text-xs text-gray-400">Loading categories...</p>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -166,6 +178,24 @@ export default function AdminNewProductPage() {
               In stock
             </label>
           </div>
+        </div>
+
+        {/*  Description input */}
+        <div className="space-y-2">
+          <label htmlFor="description" className="text-sm font-medium">
+            Description
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Write a short product description..."
+            rows={4}
+            className="w-full rounded border px-3 py-2 focus-visible:ring bg-transparent"
+          />
+          <p className="text-xs text-gray-400">
+            This will appear on “View details”.
+          </p>
         </div>
 
         <div className="space-y-2">

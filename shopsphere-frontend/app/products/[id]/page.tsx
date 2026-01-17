@@ -8,7 +8,6 @@ export default async function ProductDetails({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  
   const { id } = await params;
   const productId = Number(id);
 
@@ -26,6 +25,8 @@ export default async function ProductDetails({
       </div>
     );
   }
+
+  const description = String(product?.description ?? "").trim();
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
@@ -54,7 +55,19 @@ export default async function ProductDetails({
           )}
         </div>
 
+        {/*  DESCRIPTION */}
         <div className="mt-4">
+          <h2 className="text-sm font-semibold text-gray-200 mb-1">Description</h2>
+          {description ? (
+            <p className="text-gray-300 leading-relaxed whitespace-pre-line">
+              {description}
+            </p>
+          ) : (
+            <p className="text-gray-500 text-sm">No description yet.</p>
+          )}
+        </div>
+
+        <div className="mt-6">
           <AddToCart product={product} />
         </div>
       </div>

@@ -11,6 +11,16 @@ const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE || API_BASE;
 type HeadersMap = Record<string, string>;
 type LoginPayload = { email: string; password: string };
 
+export type Product = {
+  id: number;
+  name: string;
+  brand: string;
+  price: number;
+  categoryId: number;
+  inStock: boolean;
+  description?: string;
+};
+
 function authHeader(token?: string | null): HeadersMap {
   if (!token) return {};
   return token.startsWith("Bearer ")
@@ -77,11 +87,11 @@ export function apiRegister(payload: {
 // PRODUCTS (public GET)
 // =====================
 export function apiGetProducts() {
-  return apiFetch<any[]>(`${API_BASE}/products`);
+  return apiFetch<Product[]>(`${API_BASE}/products`);
 }
 
 export function apiGetProduct(id: number) {
-  return apiFetch<any>(`${API_BASE}/products/${id}`);
+  return apiFetch<Product>(`${API_BASE}/products/${id}`);
 }
 
 // =====================
@@ -119,23 +129,23 @@ export function apiSearchProducts(params: {
 
   return apiFetch<{
     paging: { page: number; pageSize: number; total: number; totalPages: number };
-    results: any[];
+    results: Product[];
   }>(url.toString());
 }
 
 // =====================
 // ADMIN: PRODUCTS CRUD
 // =====================
-export function apiCreateProduct(token: string, payload: any) {
-  return apiFetch<any>(`${API_BASE}/products`, {
+export function apiCreateProduct(token: string, payload: Partial<Product>) {
+  return apiFetch<Product>(`${API_BASE}/products`, {
     method: "POST",
     headers: { ...authHeader(token) },
     body: JSON.stringify(payload),
   });
 }
 
-export function apiUpdateProduct(token: string, id: number, payload: any) {
-  return apiFetch<any>(`${API_BASE}/products/${id}`, {
+export function apiUpdateProduct(token: string, id: number, payload: Partial<Product>) {
+  return apiFetch<Product>(`${API_BASE}/products/${id}`, {
     method: "PUT",
     headers: { ...authHeader(token) },
     body: JSON.stringify(payload),
@@ -160,11 +170,7 @@ export function apiCreateCategory(token: string, payload: { name: string }) {
   });
 }
 
-export function apiUpdateCategory(
-  token: string,
-  id: number,
-  payload: { name: string }
-) {
+export function apiUpdateCategory(token: string, id: number, payload: { name: string }) {
   return apiFetch<any>(`${API_BASE}/categories/${id}`, {
     method: "PUT",
     headers: { ...authHeader(token) },
