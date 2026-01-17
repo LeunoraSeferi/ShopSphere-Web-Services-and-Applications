@@ -1,13 +1,17 @@
+// lib/api.ts
 
-// Uses API Gateway base URL
+// API Gateway base (catalog/orders/search)
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000/api/v1";
+
+// Auth base (auth-service direct OR gateway)
+// If you DO NOT set NEXT_PUBLIC_AUTH_BASE, it will fallback to API_BASE (Gateway)
+const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE || API_BASE;
 
 type HeadersMap = Record<string, string>;
 type LoginPayload = { email: string; password: string };
 
 function authHeader(token?: string | null): HeadersMap {
-  // If token already contains "Bearer ", keep it safe
   if (!token) return {};
   return token.startsWith("Bearer ")
     ? { Authorization: token }
@@ -44,7 +48,26 @@ export function apiLogin(payload: LoginPayload) {
   return apiFetch<{
     token: string;
     user: { id: number; name: string; role: "admin" | "customer" };
-  }>(`${API_BASE}/auth/login`, {
+  }>(`${AUTH_BASE}/auth/login`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function apiRegister(payload: {
+  name: string;
+  email: string;
+  password: string;
+  role: "admin" | "customer";
+}) {
+  return apiFetch<{
+    id?: number;
+    name?: string;
+    email?: string;
+    role?: "admin" | "customer";
+    user?: { id: number; name: string; email: string; role: "admin" | "customer" };
+    message?: string;
+  }>(`${AUTH_BASE}/auth/register`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -69,10 +92,10 @@ export function apiGetCategories() {
 }
 
 // =====================
-// SEARCH (Solr) - via Gateway
+// SEARCH (Solr) via Gateway (optional, if you have it)
 // =====================
 export function apiSearchProducts(params: {
-  q: string; // "*" or "*:*" or "perfume"
+  q: string; // "*" or "sol"
   category?: string; // categoryId
   inStock?: string; // "true" | "false"
   minPrice?: string;
@@ -85,7 +108,6 @@ export function apiSearchProducts(params: {
 
   url.searchParams.set("q", params.q || "*");
 
-  // keep same param names you used before, but routed via gateway
   if (params.category) url.searchParams.set("categoryId", params.category);
   if (params.inStock) url.searchParams.set("inStock", params.inStock);
   if (params.minPrice) url.searchParams.set("minPrice", params.minPrice);
@@ -177,8 +199,7 @@ export function apiCreateOrder(
   });
 }
 
-// Admin (and/or user) gets orders.
-// In many implementations: admin sees all, customer sees own.
+// Admin (or customer) gets orders
 export function apiGetOrders(token: string) {
   return apiFetch<any[]>(`${API_BASE}/orders`, {
     headers: { ...authHeader(token) },
